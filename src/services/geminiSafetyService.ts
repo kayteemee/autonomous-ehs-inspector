@@ -19,12 +19,19 @@ const HAZARD_CATEGORIES = [
   "Slips/trips/falls"
 ] as const;
 
+// Supported modern Gemini models in order of priority
+const GEMINI_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-flash-latest",
+  "gemini-3.6-flash"
+];
+
 /**
  * Validates a Gemini API Key either via backend proxy or directly in browser
  */
 export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; message?: string; error?: string }> {
   const cleanKey = apiKey.trim();
-  if (!cleanKey || cleanKey.length < 10) {
+  if (!cleanKey || cleanKey.length < 8) {
     return { valid: false, error: "Please provide a valid Gemini API key from Google AI Studio." };
   }
 
@@ -45,36 +52,65 @@ export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; 
       if (data.error) return { valid: false, error: data.error };
     }
   } catch (_) {
-    // Backend unavailable (e.g. static hosting on Vercel/Netlify), fallback to direct client validation
+    // Backend unavailable (e.g. static hosting on Vercel/Netlify), proceed to direct client validation
   }
 
-  // 2. Direct client-side validation using @google/genai
-  try {
-    const ai = new GoogleGenAI({
-      apiKey: cleanKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
+  // 2. Direct client-side validation using @google/genai with model fallbacks
+  const ai = new GoogleGenAI({
+    apiKey: cleanKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
       },
-    });
+    },
+  });
 
-    const testResult = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: "Confirm key is working. Output: OK",
-    });
+  let lastError = "";
 
-    if (testResult?.text) {
-      return { valid: true, message: "Gemini API key verified directly via Google GenAI SDK!" };
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const testResult = await ai.models.generateContent({
+        model: modelName,
+        contents: "Confirm API key works. Respond with OK.",
+      });
+
+      if (testResult?.text) {
+        return { 
+          valid: true, 
+          message: `Gemini API key verified with ${modelName} via Google GenAI SDK!` 
+        };
+      }
+    } catch (err: any) {
+      lastError = err?.message || String(err);
+      console.warn(`[validateApiKey] Attempt with ${modelName} failed:`, lastError);
+      
+      // If unauthorized / invalid key, stop early
+      if (lastError.includes("API_KEY_INVALID") || lastError.includes("401") || lastError.includes("403")) {
+        return { 
+          valid: false, 
+          error: "Invalid API key. Please generate a free key at https://aistudio.google.com/app/apikey and ensure it is copied completely." 
+        };
+      }
     }
-    return { valid: false, error: "AI model response was empty." };
-  } catch (err: any) {
-    const errMsg = String(err?.message || err);
-    if (errMsg.includes("API_KEY_INVALID") || errMsg.includes("400") || errMsg.includes("403")) {
-      return { valid: false, error: "Invalid Gemini API key. Please check your key at https://aistudio.google.com/app/apikey" };
-    }
-    return { valid: false, error: `Verification error: ${errMsg}` };
   }
+
+  // Clean error parsing
+  if (lastError.includes("API_KEY_INVALID")) {
+    return { valid: false, error: "Invalid API key. Please check your key at https://aistudio.google.com/app/apikey" };
+  }
+  
+  // If parsing a JSON error message from Google Cloud
+  try {
+    const jsonMatch = lastError.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.error?.message) {
+        return { valid: false, error: parsed.error.message };
+      }
+    }
+  } catch (_) {}
+
+  return { valid: false, error: `Verification notice: ${lastError || "Could not reach Gemini model."}` };
 }
 
 /**
@@ -93,7 +129,7 @@ export async function performSafetyAnalysis(
     ""
   ).trim();
 
-  // 1. Try server-side API first
+  // 1. Try server-side API first (Google Cloud Run)
   try {
     const response = await fetch("/api/analyze-safety", {
       method: "POST",
@@ -120,7 +156,7 @@ export async function performSafetyAnalysis(
     console.warn("[geminiSafetyService] Server API unavailable, executing client-side analysis:", serverErr);
   }
 
-  // 2. Client-Side Multimodal Execution using Google GenAI SDK
+  // 2. Client-Side Multimodal Execution using Google GenAI SDK (Vercel / Netlify / Static)
   if (effectiveKey && effectiveKey !== "MY_GEMINI_API_KEY" && effectiveKey.length > 5) {
     try {
       const ai = new GoogleGenAI({
@@ -139,7 +175,6 @@ export async function performSafetyAnalysis(
         base64Clean = imagePayload.replace(/^data:image\/[a-z]+;base64,/, "");
         mimeType = imagePayload.match(/^data:(image\/[a-z]+);base64,/)?.[1] || "image/jpeg";
       } else {
-        // Fetch image data if it is a URL or static asset
         try {
           const fetched = await fetch(imagePayload);
           const blob = await fetched.blob();
@@ -181,112 +216,126 @@ If the image does not show any hazards, set safetyScore to 100 and leave issues 
 Focus context: ${focusContext}
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data: base64Clean,
-                },
-              },
-              {
-                text: promptText,
-              },
-            ],
-          },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              safetyScore: {
-                type: Type.INTEGER,
-                description: "Overall workplace safety compliance score from 0 to 100.",
-              },
-              summary: {
-                type: Type.STRING,
-                description: "High-level summary of the safety findings and compliance posture.",
-              },
-              issues: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    category: {
-                      type: Type.STRING,
-                      enum: ["act", "condition"],
-                      description: "Unsafe Act (act) or Unsafe Condition (condition).",
-                    },
-                    hazardCategory: {
-                      type: Type.STRING,
-                      enum: HAZARD_CATEGORIES as unknown as string[],
-                      description: "Categorization of the hazard.",
-                    },
-                    title: {
-                      type: Type.STRING,
-                      description: "Concise title of the observed hazard.",
-                    },
-                    severity: {
-                      type: Type.STRING,
-                      enum: ["critical", "high", "medium", "low"],
-                      description: "Severity level of the hazard.",
-                    },
-                    description: {
-                      type: Type.STRING,
-                      description: "Detailed description of what was visually observed.",
-                    },
-                    oshaRule: {
-                      type: Type.STRING,
-                      description: "Relevant OSHA standard clause or regulation.",
-                    },
-                    isoRule: {
-                      type: Type.STRING,
-                      description: "Applicable ISO standard clause (e.g. ISO 45001:2018 Clause 8.1.2).",
-                    },
-                    nfpaRule: {
-                      type: Type.STRING,
-                      description: "Applicable NFPA life safety or fire code.",
-                    },
-                    correctiveAction: {
-                      type: Type.STRING,
-                      description: "Immediate corrective action required to eliminate or mitigate the risk.",
-                    },
-                    boundingBox: {
-                      type: Type.ARRAY,
-                      items: { type: Type.INTEGER },
-                      description: "Bounding box coordinates [ymin, xmin, ymax, xmax] as percentages from 0 to 100.",
-                    },
-                  },
-                  required: [
-                    "category",
-                    "hazardCategory",
-                    "title",
-                    "severity",
-                    "description",
-                    "oshaRule",
-                    "isoRule",
-                    "nfpaRule",
-                    "correctiveAction",
-                    "boundingBox",
-                  ],
-                },
+      const contents = [
+        {
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: base64Clean,
               },
             },
-            required: ["safetyScore", "summary", "issues"],
-          },
+            {
+              text: promptText,
+            },
+          ],
         },
-      });
+      ];
 
-      const text = response?.text;
-      if (text) {
-        const parsed: SafetyReport = JSON.parse(text);
-        return parsed;
+      const schemaConfig = {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            safetyScore: {
+              type: Type.INTEGER,
+              description: "Overall workplace safety compliance score from 0 to 100.",
+            },
+            summary: {
+              type: Type.STRING,
+              description: "High-level summary of the safety findings and compliance posture.",
+            },
+            issues: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  category: {
+                    type: Type.STRING,
+                    enum: ["act", "condition"],
+                    description: "Unsafe Act (act) or Unsafe Condition (condition).",
+                  },
+                  hazardCategory: {
+                    type: Type.STRING,
+                    enum: HAZARD_CATEGORIES as unknown as string[],
+                    description: "Categorization of the hazard.",
+                  },
+                  title: {
+                    type: Type.STRING,
+                    description: "Concise title of the observed hazard.",
+                  },
+                  severity: {
+                    type: Type.STRING,
+                    enum: ["critical", "high", "medium", "low"],
+                    description: "Severity level of the hazard.",
+                  },
+                  description: {
+                    type: Type.STRING,
+                    description: "Detailed description of what was visually observed.",
+                  },
+                  oshaRule: {
+                    type: Type.STRING,
+                    description: "Relevant OSHA standard clause or regulation.",
+                  },
+                  isoRule: {
+                    type: Type.STRING,
+                    description: "Applicable ISO standard clause (e.g. ISO 45001:2018 Clause 8.1.2).",
+                  },
+                  nfpaRule: {
+                    type: Type.STRING,
+                    description: "Applicable NFPA life safety or fire code.",
+                  },
+                  correctiveAction: {
+                    type: Type.STRING,
+                    description: "Immediate corrective action required to eliminate or mitigate the risk.",
+                  },
+                  boundingBox: {
+                    type: Type.ARRAY,
+                    items: { type: Type.INTEGER },
+                    description: "Bounding box coordinates [ymin, xmin, ymax, xmax] as percentages from 0 to 100.",
+                  },
+                },
+                required: [
+                  "category",
+                  "hazardCategory",
+                  "title",
+                  "severity",
+                  "description",
+                  "oshaRule",
+                  "isoRule",
+                  "nfpaRule",
+                  "correctiveAction",
+                  "boundingBox",
+                ],
+              },
+            },
+          },
+          required: ["safetyScore", "summary", "issues"],
+        },
+      };
+
+      // Try with modern models
+      for (const modelName of GEMINI_MODELS) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config: schemaConfig,
+          });
+
+          const text = response?.text;
+          if (text) {
+            const parsed: SafetyReport = JSON.parse(text);
+            return parsed;
+          }
+        } catch (modelErr: any) {
+          console.warn(`[performSafetyAnalysis] Model ${modelName} error:`, modelErr?.message || modelErr);
+          continue;
+        }
       }
+
+      throw new Error("All Gemini vision models failed to return a response.");
     } catch (clientErr: any) {
       console.error("[geminiSafetyService] Client-side Gemini analysis failed:", clientErr);
       throw new Error(`Gemini AI analysis error: ${clientErr?.message || String(clientErr)}`);
@@ -301,8 +350,6 @@ Focus context: ${focusContext}
  * Robust fallback generator when deployed on static hosts with no API key
  */
 function generateContextAwareFallback(focusContext: string, frameIndex?: number): SafetyReport {
-  const isOutdoor = focusContext.includes("HAZMAT") || focusContext.includes("General") || focusContext.includes("Working at Heights");
-  
   return {
     safetyScore: 68,
     summary: `Inspection analysis complete for ${focusContext}. Potential perimeter, electrical ground clearance, or housekeeping observations noted. Configure your free Gemini API key in Key Setup to unlock live dynamic computer vision detection.`,
