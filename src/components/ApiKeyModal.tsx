@@ -16,6 +16,7 @@ import {
   Check, 
   HelpCircle 
 } from "lucide-react";
+import { validateApiKey } from "../services/geminiSafetyService";
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -66,21 +67,12 @@ export default function ApiKeyModal({
     setValidationResult(null);
 
     try {
-      const res = await fetch("/api/validate-key", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gemini-api-key": cleanKey,
-        },
-        body: JSON.stringify({ apiKey: cleanKey }),
-      });
+      const result = await validateApiKey(cleanKey);
 
-      const data = await res.json();
-
-      if (res.ok && data.valid) {
+      if (result.valid) {
         setValidationResult({
           valid: true,
-          message: "Key successfully verified against Google Gemini AI! Ready for live safety vision scans.",
+          message: result.message || "Key successfully verified against Google Gemini AI! Ready for live safety vision scans.",
         });
         onSaveKey(cleanKey);
         setTimeout(() => {
@@ -89,12 +81,12 @@ export default function ApiKeyModal({
       } else {
         setValidationResult({
           valid: false,
-          message: data.error || "Verification failed. Please ensure the key is copied correctly from Google AI Studio.",
+          message: result.error || "Verification failed. Please ensure the key is copied correctly from Google AI Studio.",
         });
       }
     } catch (err: any) {
       console.error("API Key verification network error:", err);
-      // Fallback: save anyway in case of transient test failure
+      // Fallback: save anyway
       onSaveKey(cleanKey);
       setValidationResult({
         valid: true,

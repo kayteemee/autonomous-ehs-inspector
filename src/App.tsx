@@ -19,6 +19,7 @@ import CompanySafetyLedger from "./components/CompanySafetyLedger";
 import ApiKeyModal from "./components/ApiKeyModal";
 import AgentArchitectureModal from "./components/AgentArchitectureModal";
 import AutoPlayDemoModal from "./components/AutoPlayDemoModal";
+import { performSafetyAnalysis } from "./services/geminiSafetyService";
 
 const STORAGE_KEY = "safety_monitor_logs_v1";
 
@@ -504,7 +505,7 @@ export default function App() {
     try {
       let finalPayloadImage = base64Image;
 
-      // Double-layered protection: If base64Image is a local URL path, try to fetch it and convert to base64 client-side
+      // If base64Image is a local URL path, try to fetch it and convert to base64
       if (base64Image && !base64Image.startsWith("data:image/")) {
         try {
           const res = await fetch(base64Image);
@@ -518,29 +519,17 @@ export default function App() {
             });
           }
         } catch (fetchErr) {
-          console.warn("[App] Client-side image URL to Base64 conversion failed, falling back to server-side resolver:", fetchErr);
+          console.warn("[App] Image URL to Base64 conversion warning:", fetchErr);
         }
       }
 
-      const response = await fetch("/api/analyze-safety", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(userApiKey ? { "x-gemini-api-key": userApiKey } : {}),
-        },
-        body: JSON.stringify({
-          image: finalPayloadImage,
-          presetScenarioId: null,
-          focusContext: focusContext,
-          apiKey: userApiKey,
-        }),
-      });
+      // Run robust multimodal safety analysis (supports Cloud Run backend, direct client Gemini fallback, and Vercel/Netlify static deployments)
+      const report: SafetyReport = await performSafetyAnalysis(
+        finalPayloadImage,
+        focusContext,
+        userApiKey
+      );
 
-      if (!response.ok) {
-        throw new Error(`Server returned error: ${response.statusText}`);
-      }
-
-      const report: SafetyReport = await response.json();
       setActiveReport(report);
       setCurrentImageSrc(finalPayloadImage);
 
@@ -572,7 +561,7 @@ export default function App() {
 
     } catch (err: any) {
       console.error("Safety scan failed:", err);
-      alert(`Safety analysis failed: ${err.message || String(err)}. Please verify your connection or check logs.`);
+      alert(`Safety analysis notice: ${err.message || String(err)}`);
     } finally {
       setIsScanning(false);
     }

@@ -5,6 +5,7 @@ import {
   FileSpreadsheet, Save, ChevronRight, HelpCircle
 } from "lucide-react";
 import { SafetyIssue, SafetyReport, AuditLogEntry } from "../types";
+import { performSafetyAnalysis } from "../services/geminiSafetyService";
 
 interface LiveVideoAnalyzerProps {
   onSaveToLedger: (entry: AuditLogEntry) => void;
@@ -190,25 +191,13 @@ export default function LiveVideoAnalyzer({
       setActiveFrameIndex(i); // Focus on the frame being analyzed
 
       try {
-        const response = await fetch("/api/analyze-safety", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(userApiKey ? { "x-gemini-api-key": userApiKey } : {}),
-          },
-          body: JSON.stringify({
-            image: updatedFrames[i].imageSrc,
-            focusContext: focusContext,
-            frameIndex: updatedFrames[i].index,
-            apiKey: userApiKey,
-          }),
-        });
+        const report = await performSafetyAnalysis(
+          updatedFrames[i].imageSrc,
+          focusContext,
+          userApiKey,
+          updatedFrames[i].index
+        );
 
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.statusText}`);
-        }
-
-        const report: SafetyReport = await response.json();
         updatedFrames[i].report = report;
         updatedFrames[i].status = "completed";
       } catch (err) {
