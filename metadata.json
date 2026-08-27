@@ -1,0 +1,6 @@
+{
+  "name": "Workplace Safety Monitor",
+  "description": "An AI-powered computer vision system to identify unsafe conditions and unsafe acts in the workplace for OSHA safety monitoring.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

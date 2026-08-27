@@ -1,0 +1,459 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --animate-scan: scan 3s ease-in-out infinite;
+
+  @keyframes scan {
+    0%, 100% { transform: translateY(-100%); }
+    50% { transform: translateY(100%); }
+  }
+}
+
+body {
+  background-color: #020617;
+  font-family: var(--font-sans);
+  color: #f1f5f9;
+  position: relative;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom CSS Variables & Style Overrides for Dynamic Themes */
+
+/* Base dynamic variables applied on the wrapper */
+.min-h-screen {
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dynamic Mesh Background */
+.mesh-bg {
+  background: radial-gradient(circle at 20% 20%, var(--theme-mesh-1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, var(--theme-mesh-2) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, var(--theme-mesh-3) 0%, transparent 100%) !important;
+  transition: background 0.4s ease;
+}
+
+/* Dynamic Glass Panel */
+.glass-panel {
+  background: var(--theme-glass-bg) !important;
+  border-color: var(--theme-glass-border) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* GENERAL LIGHT THEME SUB-CLASS OVERRIDES */
+/* Guarantees 100% WCAG contrast and beautiful aesthetic matches in light variants */
+.theme-type-light text, 
+.theme-type-light h1, 
+.theme-type-light h2, 
+.theme-type-light h3, 
+.theme-type-light h4, 
+.theme-type-light h5, 
+.theme-type-light h6 {
+  color: var(--theme-text) !important;
+}
+
+.theme-type-light p,
+.theme-type-light li,
+.theme-type-light label {
+  color: var(--theme-text-muted) !important;
+}
+
+.theme-type-light .text-white {
+  color: var(--theme-text) !important;
+}
+.theme-type-light .text-slate-100 {
+  color: var(--theme-text) !important;
+}
+.theme-type-light .text-slate-200 {
+  color: var(--theme-text) !important;
+}
+
+/* Ensure text remains pristine white when on navy-blue, emerald-green, or rose-red colored solid backgrounds in Light Mode */
+.theme-type-light .bg-indigo-600,
+.theme-type-light .bg-indigo-500,
+.theme-type-light .bg-indigo-700,
+.theme-type-light .bg-indigo-600 *,
+.theme-type-light .bg-indigo-500 *,
+.theme-type-light .bg-indigo-700 *,
+.theme-type-light .bg-emerald-600,
+.theme-type-light .bg-emerald-600 *,
+.theme-type-light .bg-rose-600,
+.theme-type-light .bg-rose-600 * {
+  color: #ffffff !important;
+}
+.theme-type-light .text-slate-300 {
+  color: var(--theme-text-muted) !important;
+}
+.theme-type-light .text-slate-400 {
+  color: var(--theme-text-muted) !important;
+}
+.theme-type-light .text-indigo-300 {
+  color: var(--theme-primary) !important;
+}
+.theme-type-light .text-indigo-400 {
+  color: var(--theme-primary) !important;
+}
+
+/* Input / dropdown styling overrides for light theme variants */
+.theme-type-light input,
+.theme-type-light select,
+.theme-type-light textarea {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: var(--theme-text) !important;
+}
+.theme-type-light option {
+  background-color: #ffffff !important;
+  color: var(--theme-text) !important;
+}
+
+/* Header & tab button navigation custom light theme overrides */
+.theme-type-light nav {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+.theme-type-light nav button {
+  color: var(--theme-text-muted) !important;
+}
+.theme-type-light nav button:hover {
+  color: var(--theme-text) !important;
+}
+.theme-type-light nav button.bg-indigo-600 {
+  background-color: var(--theme-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--theme-glass-border) !important;
+}
+
+/* Utility classes mapped dynamically inside light theme */
+.theme-type-light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+.theme-type-light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+.theme-type-light .border-white\/15 {
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+.theme-type-light .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.theme-type-light .bg-slate-950\/80,
+.theme-type-light .bg-slate-950\/85,
+.theme-type-light .bg-slate-950 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: var(--theme-text) !important;
+}
+
+.theme-type-light .bg-black\/40 {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Accentuate severe categories to maintain safety standard visibility */
+.theme-type-light .text-emerald-400 {
+  color: #16a34a !important; /* Rich green */
+}
+.theme-type-light .text-amber-400 {
+  color: #ca8a04 !important; /* Rich amber */
+}
+.theme-type-light .text-red-400 {
+  color: #dc2626 !important; /* Rich red */
+}
+
+/* Scrollbars overrides in Light Mode */
+.theme-type-light ::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.02);
+}
+.theme-type-light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+}
+.theme-type-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.mesh-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: radial-gradient(circle at 20% 20%, rgba(30, 58, 138, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(76, 29, 149, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 1) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+/* Custom scrollbar to match dark glass theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dynamic theme mappings for indigo classes */
+.bg-indigo-600 {
+  background-color: var(--theme-primary, #4f46e5) !important;
+}
+.bg-indigo-500 {
+  background-color: var(--theme-primary, #6366f1) !important;
+}
+.text-indigo-400 {
+  color: var(--theme-primary, #818cf8) !important;
+}
+.text-indigo-300 {
+  color: var(--theme-primary, #a5b4fc) !important;
+}
+.text-indigo-600 {
+  color: var(--theme-primary, #4f46e5) !important;
+}
+.border-indigo-600 {
+  border-color: var(--theme-primary, #4f46e5) !important;
+}
+.border-indigo-500 {
+  border-color: var(--theme-primary, #6366f1) !important;
+}
+.border-indigo-400\/20 {
+  border-color: var(--theme-glass-border, rgba(99, 102, 241, 0.2)) !important;
+}
+.shadow-\[0_0_12px_rgba\(99\,102\,241\,0\.4\)\] {
+  box-shadow: 0 0 12px var(--theme-primary, rgba(99, 102, 241, 0.4)) !important;
+}
+.hover\:bg-indigo-700:hover {
+  filter: brightness(0.9) !important;
+}
+.hover\:text-indigo-300:hover {
+  color: var(--theme-primary) !important;
+  filter: brightness(1.1) !important;
+}
+
+/* FORCE COMPLIANCE: Standard high-contrast light-themed share card (Option B)
+   This block overrides all dynamic parent-inherited theme properties or important utility overrides
+   to guarantee standard, pristine, 100% WCAG-compliant readability on shared image cards. */
+.standard-share-card {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.standard-share-card * {
+  text-shadow: none !important;
+}
+
+/* Heading Overrides */
+.standard-share-card h1,
+.standard-share-card h2,
+.standard-share-card h3,
+.standard-share-card h4 {
+  color: #0f172a !important;
+  font-family: "Space Grotesk", sans-serif !important;
+}
+
+/* Standard Paragraph and Spans */
+.standard-share-card p {
+  color: #334155 !important; /* Slate-700 */
+}
+
+.standard-share-card span,
+.standard-share-card div,
+.standard-share-card font {
+  color: #1e293b !important; /* Slate-800 */
+}
+
+/* Force specific colors in standard light card */
+.standard-share-card .text-white {
+  color: #ffffff !important;
+}
+
+.standard-share-card .text-slate-200 {
+  color: #334155 !important; /* Rich slate text */
+}
+
+.standard-share-card .text-slate-300 {
+  color: #475569 !important; /* Muted slate text */
+}
+
+.standard-share-card .text-slate-400 {
+  color: #64748b !important; /* Slate grey */
+}
+
+/* Severity badge text colors inside standard card */
+.standard-share-card .text-red-400 {
+  color: #b91c1c !important; /* Rich Dark Red for safety contrast */
+}
+
+.standard-share-card .text-orange-400 {
+  color: #c2410c !important; /* Rich Dark Orange */
+}
+
+.standard-share-card .text-amber-400 {
+  color: #b45309 !important; /* Rich Dark Amber */
+}
+
+.standard-share-card .text-blue-400 {
+  color: #1d4ed8 !important; /* Rich Dark Blue */
+}
+
+.standard-share-card .text-purple-400 {
+  color: #6d28d9 !important; /* Rich Dark Purple */
+}
+
+.standard-share-card .text-cyan-400 {
+  color: #0e7490 !important; /* Rich Dark Cyan */
+}
+
+.standard-share-card .text-emerald-400 {
+  color: #047857 !important; /* Rich Dark Emerald */
+}
+
+.standard-share-card .text-indigo-300 {
+  color: #4f46e5 !important; /* Standard Indigo */
+}
+
+.standard-share-card .text-indigo-400 {
+  color: #3730a3 !important; /* Rich Dark Indigo */
+}
+
+/* Background classes */
+.standard-share-card .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+
+.standard-share-card .bg-slate-900 {
+  background-color: #f8fafc !important; /* Light Slate base */
+}
+
+.standard-share-card .bg-white\/5 {
+  background-color: #f1f5f9 !important; /* Slate-100 */
+}
+
+/* Border classes */
+.standard-share-card .border-white\/10 {
+  border-color: #e2e8f0 !important; /* Slate-200 */
+}
+
+.standard-share-card .border-white\/15 {
+  border-color: #cbd5e1 !important; /* Slate-300 */
+}
+
+.standard-share-card .border-white\/5 {
+  border-color: #f1f5f9 !important; /* Slate-100 */
+}
+
+/* Semi-transparent/Colored Badges in Light Card */
+.standard-share-card .bg-red-500\/10 {
+  background-color: #fef2f2 !important; /* Solid Light Red */
+  border-color: #fecaca !important;
+}
+
+.standard-share-card .bg-orange-500\/10 {
+  background-color: #fff7ed !important; /* Solid Light Orange */
+  border-color: #ffedd5 !important;
+}
+
+.standard-share-card .bg-amber-500\/10 {
+  background-color: #fefbeb !important; /* Solid Light Amber */
+  border-color: #fef3c7 !important;
+}
+
+.standard-share-card .bg-blue-500\/10 {
+  background-color: #eff6ff !important; /* Solid Light Blue */
+  border-color: #dbeafe !important;
+}
+
+.standard-share-card .bg-purple-500\/15 {
+  background-color: #faf5ff !important; /* Solid Light Purple */
+  border-color: #f3e8ff !important;
+}
+
+.standard-share-card .bg-cyan-500\/15 {
+  background-color: #ecfeff !important; /* Solid Light Cyan */
+  border-color: #cffafe !important;
+}
+
+.standard-share-card .bg-emerald-500\/10 {
+  background-color: #ecfdf5 !important; /* Solid Light Emerald */
+  border-color: #d1fae5 !important;
+}
+
+.standard-share-card .bg-emerald-500\/15 {
+  background-color: #ecfdf5 !important; /* Solid Light Emerald */
+  border-color: #d1fae5 !important;
+}
+
+.standard-share-card .bg-indigo-500\/10 {
+  background-color: #f5f3ff !important; /* Solid Light Indigo */
+  border-color: #ddd6fe !important;
+}
+
+.standard-share-card .bg-amber-500\/5 {
+  background-color: #fffbeb !important;
+}
+
+.standard-share-card .border-amber-500\/10 {
+  border-color: #fef3c7 !important;
+}
+
+.standard-share-card .bg-indigo-50/50 {
+  background-color: #f5f3ff !important;
+}
+
+.standard-share-card .border-indigo-50/10 {
+  border-color: #ddd6fe !important;
+}
+
+/* Text and border fallback overrides on active elements */
+.standard-share-card .text-amber-300 {
+  color: #b45309 !important; /* Amber-700 */
+}
+
+.standard-share-card .text-indigo-300 {
+  color: #4338ca !important; /* Indigo-700 */
+}
+
+.standard-share-card .border-emerald-500\/30 {
+  border-color: #a7f3d0 !important;
+}
+
+.standard-share-card .border-rose-500\/30 {
+  border-color: #fecdd3 !important;
+}
+
+.standard-share-card .text-emerald-400 {
+  color: #047857 !important;
+}
+
+.standard-share-card .text-rose-400 {
+  color: #be123c !important;
+}
+
+

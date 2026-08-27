@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function() {
+        const ignoreErrorPatterns = [
+          /metamask/i,
+          /keyring/i,
+          /ethereum/i,
+          /wallet/i,
+          /rpc/i,
+          /KeyRing is locked/i,
+          /Failed to connect to MetaMask/i,
+          /Could not establish connection/i,
+          /Receiving end does not exist/i,
+          /message port closed/i,
+          /message channel closed/i,
+          /A listener indicated an asynchronous response/i,
+          /asynchronous response by returning true/i,
+          /ResizeObserver loop/i,
+          /Extension context invalidated/i,
+          /Failed to fetch/i,
+          /NetworkError/i,
+          /chrome-extension/i
+        ];
+
+        const shouldIgnore = (serialized) => {
+          return ignoreErrorPatterns.some(pattern => pattern.test(serialized));
+        };
+
+        const handleGlobalError = (event) => {
+          let serialized = "";
+          try {
+            if (event.error) {
+              serialized += " " + event.error.message + " " + event.error.stack;
+            }
+            if (event.reason) {
+              serialized += " " + (event.reason.message || event.reason.stack || String(event.reason));
+            }
+            if (event.message) {
+              serialized += " " + event.message;
+            }
+            serialized += " " + String(event);
+          } catch (_) {}
+
+          if (shouldIgnore(serialized)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        };
+
+        window.addEventListener("error", handleGlobalError, { capture: true });
+        window.addEventListener("unhandledrejection", handleGlobalError, { capture: true });
+
+        const originalOnError = window.onerror;
+        window.onerror = function (message, source, lineno, colno, error) {
+          const errorMsg = String(message) + " " + (error ? (error.message + " " + error.stack) : "");
+          if (shouldIgnore(errorMsg)) {
+            return true;
+          }
+          if (originalOnError) {
+            return originalOnError.apply(this, arguments);
+          }
+        };
+
+        const originalConsoleError = console.error;
+        console.error = function (...args) {
+          const message = args.map(arg => {
+            if (arg instanceof Error) {
+              return arg.message + " " + arg.stack;
+            }
+            if (typeof arg === "object") {
+              try { return JSON.stringify(arg); } catch { return String(arg); }
+            }
+            return String(arg);
+          }).join(" ");
+
+          if (shouldIgnore(message)) {
+            return;
+          }
+          originalConsoleError.apply(console, args);
+        };
+
+        const originalConsoleWarn = console.warn;
+        console.warn = function (...args) {
+          const message = args.map(arg => {
+            if (arg instanceof Error) {
+              return arg.message + " " + arg.stack;
+            }
+            if (typeof arg === "object") {
+              try { return JSON.stringify(arg); } catch { return String(arg); }
+            }
+            return String(arg);
+          }).join(" ");
+
+          if (shouldIgnore(message)) {
+            return;
+          }
+          originalConsoleWarn.apply(console, args);
+        };
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
